@@ -10,7 +10,7 @@ per Raspberry Pi's instructions.
 
 
 Clone this repository and set it as your working directory.
-Make sure PICO_SDK_PATH is set in your environment.
+Make sure `PICO_SDK_PATH` is set in your environment.
 
 Set up the cmake build environment:
 
@@ -33,9 +33,9 @@ picotool load build/wattown.uf2 -fvx
 ## Usage instructions
 
 If the Pico is connected over USB, you can connect to it to receive simulation
-status messages using a serial console like (tio)[https://github.com/tio/tio].
+status messages using a serial console like [tio](https://github.com/tio/tio).
 Note you'll need to determine the correct TTY device to use (although
-/dev/ttyACM0 is a good place to start).
+`/dev/ttyACM0` is a good place to start).
 
 ```sh
 tio /dev/ttyACM0
