@@ -4,68 +4,131 @@
 #include "pico/stdlib.h"
 
 #define N_PERIODS 96
+#define PLAYPAUSE_BUTTON_PIN 0
+#define RESET_BUTTON_PIN 1
+#define PLAYPAUSE_LED_PIN PICO_DEFAULT_LED_PIN
+
+const uint8_t demo_solar[N_PERIODS] = {
+    0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 3, 3, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 2, 3, 4, 3, 2, 1, 0, 1, 0, 0, 0, 0, 0, 0
+};
+
+const uint8_t demo_wind[N_PERIODS] = {
+    5, 4, 5, 6, 7, 6, 5, 4, 3, 4, 5, 6, 5, 6, 5, 4, 3, 4, 5, 6, 7, 7, 7, 6,
+    5, 4, 3, 2, 1, 2, 1, 0, 1, 2, 1, 2, 3, 2, 3, 2, 1, 0, 1, 0, 1, 2, 3, 2,
+    5, 4, 5, 6, 7, 6, 5, 4, 3, 4, 5, 6, 5, 6, 5, 4, 3, 4, 5, 6, 7, 7, 7, 6,
+    5, 4, 3, 2, 1, 2, 1, 0, 1, 2, 1, 2, 3, 2, 3, 2, 1, 0, 1, 0, 1, 2, 3, 2
+};
+
+const uint8_t demo_demand[N_PERIODS] = {
+    3, 2, 3, 4, 5, 6, 6, 7, 7, 6, 6, 5, 5, 4, 4, 5, 5, 6, 6, 7, 6, 5, 4, 3,
+    3, 2, 3, 4, 5, 6, 6, 7, 7, 6, 6, 5, 5, 4, 4, 5, 5, 6, 6, 7, 6, 5, 4, 3,
+    3, 2, 3, 4, 5, 6, 6, 7, 7, 6, 6, 5, 5, 4, 4, 5, 5, 6, 6, 7, 6, 5, 4, 3,
+    3, 2, 3, 4, 5, 6, 6, 7, 7, 6, 6, 5, 5, 4, 4, 5, 5, 6, 6, 7, 6, 5, 4, 3
+};
+
+uint8_t demo_t = 0;
+uint8_t demo_storage_soc = 0;
+bool demo_paused = false;
+
+int64_t demo_mode_advance(alarm_id_t id, __unused void* user_data) {
+
+    if (demo_paused) return 250000;
+
+    uint8_t date = demo_t / 24 + 1;
+    uint8_t time = demo_t % 24;
+
+    if (!(demo_t % 12)) printf("Day\tTime\tDemand (MW)\tWind (MW)\tSolar (MW)\tReservoir (MWh)\n");
+
+    uint8_t surplus = 0;
+    uint8_t shortfall = 0;
+    uint8_t supply = demo_wind[demo_t] + demo_solar[demo_t];
+
+    if (supply >= demo_demand[demo_t]) {
+        surplus = supply - demo_demand[demo_t];
+    } else {
+        shortfall = demo_demand[demo_t] - supply;
+    }
+
+    if (surplus) {
+        demo_storage_soc += surplus;
+    } else if (demo_storage_soc >= shortfall) {
+        demo_storage_soc -= shortfall;
+    } else {
+        demo_storage_soc = 0;
+    }
+
+    printf("%d\t%d:00\t%d\t\t%d\t\t%d\t\t%d\n", date, time,
+        demo_demand[demo_t], demo_wind[demo_t], demo_solar[demo_t],
+        demo_storage_soc);
+
+    demo_t += 1;
+    if (demo_t == N_PERIODS) demo_t = 0;
+
+    return 1000000;
+
+}
+
+void toggle_demo_pause() {
+
+    demo_paused ^= 1;
+
+    if (demo_paused) {
+        gpio_put(PLAYPAUSE_LED_PIN, false);
+        printf("[Simulation paused]\n");
+    } else {
+        gpio_put(PLAYPAUSE_LED_PIN, true);
+        printf("[Simulation resumed]\n");
+    }
+
+}
+
+void demo_reset() {
+    demo_t = 0;
+    demo_storage_soc = 0;
+    printf("[Simulation reset]\n");
+}
 
 int main() {
 
     stdio_init_all();
 
+    gpio_init(PLAYPAUSE_BUTTON_PIN);
+    gpio_set_dir(PLAYPAUSE_BUTTON_PIN, GPIO_IN);
 
-    const uint8_t solar[N_PERIODS] = {
-        0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 3, 3, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 2, 3, 4, 3, 2, 1, 0, 1, 0, 0, 0, 0, 0, 0
-    };
+    gpio_init(RESET_BUTTON_PIN);
+    gpio_set_dir(RESET_BUTTON_PIN, GPIO_IN);
 
-    const uint8_t wind[N_PERIODS] = {
-        5, 4, 5, 6, 7, 6, 5, 4, 3, 4, 5, 6, 5, 6, 5, 4, 3, 4, 5, 6, 7, 7, 7, 6,
-        5, 4, 3, 2, 1, 2, 1, 0, 1, 2, 1, 2, 3, 2, 3, 2, 1, 0, 1, 0, 1, 2, 3, 2,
-        5, 4, 5, 6, 7, 6, 5, 4, 3, 4, 5, 6, 5, 6, 5, 4, 3, 4, 5, 6, 7, 7, 7, 6,
-        5, 4, 3, 2, 1, 2, 1, 0, 1, 2, 1, 2, 3, 2, 3, 2, 1, 0, 1, 0, 1, 2, 3, 2
-    };
+    gpio_init(PLAYPAUSE_LED_PIN);
+    gpio_set_dir(PLAYPAUSE_LED_PIN, GPIO_OUT);
 
-    const uint8_t demand[N_PERIODS] = {
-        3, 2, 3, 4, 5, 6, 6, 7, 7, 6, 6, 5, 5, 4, 4, 5, 5, 6, 6, 7, 6, 5, 4, 3,
-        3, 2, 3, 4, 5, 6, 6, 7, 7, 6, 6, 5, 5, 4, 4, 5, 5, 6, 6, 7, 6, 5, 4, 3,
-        3, 2, 3, 4, 5, 6, 6, 7, 7, 6, 6, 5, 5, 4, 4, 5, 5, 6, 6, 7, 6, 5, 4, 3,
-        3, 2, 3, 4, 5, 6, 6, 7, 7, 6, 6, 5, 5, 4, 4, 5, 5, 6, 6, 7, 6, 5, 4, 3
-    };
+    gpio_put(PLAYPAUSE_LED_PIN, true);
 
-    uint8_t storage_soc = 0;
+    alarm_id_t demo_alarm = add_alarm_in_ms(1000, demo_mode_advance, NULL, false);
+
+    bool pause_pressed = false;
+    bool pause_pressed_prev = false;
+
+    bool reset_pressed = false;
+    bool reset_pressed_prev = false;
 
     while (true) {
 
-        for (uint8_t t = 0; t < N_PERIODS; t += 1) {
+        // TODO: Mode change button
 
-            uint8_t date = t / 24 + 1;
-            uint8_t time = t % 24;
+        pause_pressed = gpio_get(PLAYPAUSE_BUTTON_PIN);
+        reset_pressed = gpio_get(RESET_BUTTON_PIN);
 
-            if (!(t % 12)) printf("Day\tTime\tDemand (MW)\tWind (MW)\tSolar (MW)\tReservoir (MWh)\n");
+        if (pause_pressed && !pause_pressed_prev) toggle_demo_pause();
+        if (reset_pressed && !reset_pressed_prev) demo_reset();
 
-            uint8_t surplus = 0;
-            uint8_t shortfall = 0;
-            uint8_t supply = wind[t] + solar[t];
+        pause_pressed_prev = pause_pressed;
+        reset_pressed_prev = reset_pressed;
 
-            if (supply >= demand[t]) {
-                surplus = supply - demand[t];
-            } else {
-                shortfall = demand[t] - supply;
-            }
+        sleep_ms(10);
 
-            if (surplus) {
-                storage_soc += surplus;
-            } else if (storage_soc >= shortfall) {
-                storage_soc -= shortfall;
-            } else {
-                storage_soc = 0;
-            }
-
-            printf("%d\t%d:00\t%d\t\t%d\t\t%d\t\t%d\n", date, time,
-                demand[t], wind[t], solar[t], storage_soc);
-
-            sleep_ms(1000);
-
-        }
     }
 
 }
