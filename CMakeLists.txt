@@ -6,6 +6,8 @@ include(pico_sdk_import.cmake)
 
 project(wattown)
 
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/generated)
+
 add_executable(wattown
     wattown.c
 )
@@ -14,9 +16,15 @@ add_executable(wattown
 pico_sdk_init()
 pico_enable_stdio_usb(wattown 1)
 pico_enable_stdio_uart(wattown 0)
+pico_generate_pio_header(wattown ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
 
 # Add pico_stdlib library which aggregates commonly used features
-target_link_libraries(wattown pico_stdlib)
-
-# create map/bin/hex/uf2 file in addition to ELF.
+target_link_libraries(wattown pico_stdlib hardware_pio)
 pico_add_extra_outputs(wattown)
+
+add_executable(pio_ws2812)
+pico_generate_pio_header(pio_ws2812 ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
+
+target_sources(pio_ws2812 PRIVATE ws2812.c)
+target_link_libraries(pio_ws2812 PRIVATE pico_stdlib hardware_pio)
+pico_add_extra_outputs(pio_ws2812)
