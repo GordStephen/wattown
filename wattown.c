@@ -15,13 +15,14 @@
 #include "clock.h"
 #include "demo.h"
 
+// Storage state is mode-agnostic, abstract that code out of demo.h
+// Define city lights agnostically as well
+// Clock drawing is mode-agnostic and already abstracted
+
 int main() {
 
     // For logging over USB
     stdio_init_all();
-
-    // For reading generator powers from ADC boards
-    i2c_init(i2c_default, 48000);
 
     demo_init();
     demo_reset();

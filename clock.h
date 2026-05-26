@@ -40,6 +40,19 @@ void demo_init_clockleds() {
 
 }
 
+void demo_init_cityleds() {
+
+    pio_claim_free_sm_and_add_program_for_gpio_range(
+        &ws2812_program,
+        &conf.pios.city.pio, &conf.pios.city.sm, &conf.pios.city.offset,
+        conf.pins.pixels.city, 1, true);
+
+    ws2812_program_init(
+        conf.pios.city.pio, conf.pios.city.sm, conf.pios.city.offset,
+        conf.pins.pixels.city, 800000, false);
+
+}
+
 void demo_update_clockleds(uint8_t time, uint8_t solarlevel) {
 
     TimeOfDay timeofday = timesofday[time];
@@ -54,5 +67,24 @@ void demo_update_clockleds(uint8_t time, uint8_t solarlevel) {
 
 }
 
+void demo_update_cityleds(uint8_t time, uint8_t demandlevel) {
 
+    for (size_t p = 0; p < 99; p += 1) {
+
+        uint32_t color = 0;
+
+        if ((p < 4) ) {  // Uphill distribution lines
+            // Do nothing for now
+        } else if (p < 7) { // Wattown sign
+            if (time < 6 || time > 17) color = 0x00884400;
+        } else if (p < 94) { // City buildings
+            color = 0x00010101 + 0x00010101 * (demandlevel - 1) * 36;
+        } else { // Lowland distribution lines
+            // Do nothing for now
+        }
+
+        put_pixel(conf.pios.city.pio, conf.pios.city.sm, color);
+    }
+
+}
 #endif // time_h_INCLUDED

@@ -50,7 +50,9 @@ void demo_init_storageleds() {
 void demo_init() {
     demo_init_controls();
     demo_init_clockleds();
+    demo_init_cityleds();
     demo_init_storageleds();
+    init_i2c();
 }
 
 void demo_update_storageleds() {
@@ -122,6 +124,7 @@ int64_t demo_advance(alarm_id_t id, __unused void* user_data) {
     if (!(time % 12)) printf("Day\tTime\tDemand (MW)\tWind (MW)\tSolar (MW)\tReservoir (MWh)\n");
 
     demo_update_clockleds(time, demo.solar[t]);
+    demo_update_cityleds(time, demo.demand[t]);
 
     demo_update_storage();
     demo_update_storageleds();
@@ -129,6 +132,9 @@ int64_t demo_advance(alarm_id_t id, __unused void* user_data) {
     printf("%d\t%d:00\t%d\t\t%d\t\t%d\t\t%d\n", date, time,
         demo.demand[t], demo.wind[t], demo.solar[t],
         demo.storage_soc);
+
+    uint8_t pv1 = get_generation(conf.gen_inputs.pv[0]);
+    printf("PV Panel: %d\n", pv1);
 
     demo.t = t+1 == N_PERIODS ? 0 : t+1;
 

@@ -35,12 +35,18 @@ struct {
 
         struct {
             uint clock;
+            uint city;
         } pixels;
 
         struct {
             uint playpause;
             uint storage[NUM_STORAGE_LEDS];
         } leds;
+
+        struct {
+            uint sda;
+            uint scl;
+        } i2c;
 
     } pins;
 
@@ -52,6 +58,7 @@ struct {
 
     struct {
         PIOConfig clock;
+        PIOConfig city;
     } pios;
 
 } conf = {
@@ -65,12 +72,17 @@ struct {
 
         .pixels = {
             .clock = 2,
-            // city pixels will go on GPIO 3
+            .city = 3,
         },
 
         .leds = {
             .playpause = PICO_DEFAULT_LED_PIN, // GPIO 25 on Pico [2]
             .storage = { 10, 11 , 12, 13 },
+        },
+
+        .i2c = {
+            .sda = 4,
+            .scl = 5,
         },
 
     },
@@ -90,7 +102,7 @@ struct {
         },
 
         .pv = {
-            { .addr = 0x49, .ch = 0 },
+            { .addr = 0x48, .ch = 0 },
             { .addr = 0x49, .ch = 1 },
             { .addr = 0x49, .ch = 2 },
             { .addr = 0x49, .ch = 3 },
@@ -101,8 +113,8 @@ struct {
     },
 
     .pios = {
-        .clock = { 0 } // to be initialized
-        // eventually city PIO
+        .clock = { 0 }, // to be initialized
+        .city= { 0 } // to be initialized
     }
 
 };
