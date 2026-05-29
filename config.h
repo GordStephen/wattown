@@ -48,6 +48,11 @@ struct {
             uint scl;
         } i2c;
 
+        struct {
+            uint wind1;
+            uint wind2;
+        } pwm;
+
     } pins;
 
     struct {
@@ -83,6 +88,11 @@ struct {
         .i2c = {
             .sda = 4,
             .scl = 5,
+        },
+
+        .pwm = {
+            .wind1 = 6,
+            .wind2 = 7,
         },
 
     },

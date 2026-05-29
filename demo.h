@@ -47,11 +47,21 @@ void demo_init_storageleds() {
     }
 }
 
+void demo_init_pwm() {
+    // TODO: Change PWM frequency to avoid noise?
+    gpio_set_function(conf.pins.pwm.wind1, GPIO_FUNC_PWM);
+    gpio_set_function(conf.pins.pwm.wind2, GPIO_FUNC_PWM);
+    uint slice_num = pwm_gpio_to_slice_num(conf.pins.pwm.wind1);
+    pwm_set_both_levels(slice_num, 0, 0);
+    pwm_set_enabled(slice_num, true);
+}
+
 void demo_init() {
     demo_init_controls();
     demo_init_clockleds();
     demo_init_cityleds();
     demo_init_storageleds();
+    demo_init_pwm();
     init_i2c();
 }
 

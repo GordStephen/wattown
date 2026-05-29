@@ -6,6 +6,7 @@
 #include "hardware/clocks.h"
 #include "hardware/i2c.h"
 #include "hardware/pio.h"
+#include "hardware/pwm.h"
 
 #include "ws2812.pio.h"
 #include "ws2812.h"
@@ -13,6 +14,7 @@
 #include "config.h"
 #include "util.h"
 #include "clock.h"
+#include "wind.h"
 #include "demo.h"
 
 // Storage state is mode-agnostic, abstract that code out of demo.h
@@ -28,6 +30,7 @@ int main() {
     demo_reset();
 
     alarm_id_t demo_alarm = add_alarm_in_ms(1000, demo_advance, NULL, false);
+    alarm_id_t wind_alarm = add_alarm_in_us(sample_delay, turbine_advance, NULL, false);
 
     gpio_set_irq_enabled(conf.pins.buttons.playpause, GPIO_IRQ_EDGE_FALL, true);
     gpio_set_irq_enabled(conf.pins.buttons.reset, GPIO_IRQ_EDGE_FALL, true);

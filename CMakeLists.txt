@@ -17,5 +17,5 @@ pico_enable_stdio_usb(wattown 1)
 pico_enable_stdio_uart(wattown 0)
 pico_generate_pio_header(wattown ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
 
-target_link_libraries(wattown pico_stdlib hardware_pio hardware_i2c)
+target_link_libraries(wattown pico_stdlib hardware_pio hardware_i2c hardware_pwm)
 pico_add_extra_outputs(wattown)
