@@ -95,9 +95,30 @@ void demo_reset() {
     printf("[Simulation reset]\n");
 }
 
+int64_t caes_timeout(alarm_id_t id, __unused void* user_data) {
+    interact.caes = false;
+    interact.caes_alarm = 0;
+    printf("CAES inactive");
+    return 0;
+}
+
+void caes_handler(uint pin, uint32_t event_mask) {
+
+    if (interact.caes) {
+        cancel_alarm(interact.caes_alarm);
+    } else {
+        interact.caes = true;
+        printf("CAES active");
+    }
+
+    interact.caes_alarm = add_alarm_in_ms(1000, caes_timeout, NULL, false);
+
+}
+
 void demo_button_handler(uint pin, uint32_t event_mask) {
     if (pin == conf.pins.buttons.reset) demo_reset();
     else if (pin == conf.pins.buttons.playpause) demo_toggle_pause();
+    else if (pin == conf.pins.sensors.caes) caes_handler(pin, event_mask);
 }
 
 void demo_update_storage() {
@@ -143,8 +164,8 @@ int64_t demo_advance(alarm_id_t id, __unused void* user_data) {
         demo.demand[t], demo.wind[t], demo.solar[t],
         demo.storage_soc);
 
-    uint8_t pv1 = get_generation(conf.gen_inputs.pv[0]);
-    printf("PV Panel: %d\n", pv1);
+    // uint8_t pv1 = get_generation(conf.gen_inputs.pv[0]);
+    // printf("PV Panel: %d\n", pv1);
 
     demo.t = t+1 == N_PERIODS ? 0 : t+1;
 

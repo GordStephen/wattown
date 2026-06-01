@@ -15,11 +15,14 @@
 #include "util.h"
 #include "clock.h"
 #include "wind.h"
+#include "interact.h"
 #include "demo.h"
 
 // Storage state is mode-agnostic, abstract that code out of demo.h
 // Define city lights agnostically as well
 // Clock drawing is mode-agnostic and already abstracted
+
+// gpio_set_irq_callback(caes_handler);
 
 int main() {
 
@@ -31,6 +34,11 @@ int main() {
 
     alarm_id_t demo_alarm = add_alarm_in_ms(1000, demo_advance, NULL, false);
     alarm_id_t wind_alarm = add_alarm_in_us(sample_delay, turbine_advance, NULL, false);
+
+    // TODO: Move these to global init and interactive-mode specific
+    // interrupt setup
+    init_button(conf.pins.sensors.caes);
+    gpio_set_irq_enabled(conf.pins.sensors.caes, GPIO_IRQ_EDGE_FALL, true);
 
     gpio_set_irq_enabled(conf.pins.buttons.playpause, GPIO_IRQ_EDGE_FALL, true);
     gpio_set_irq_enabled(conf.pins.buttons.reset, GPIO_IRQ_EDGE_FALL, true);

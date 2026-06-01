@@ -44,6 +44,10 @@ struct {
         } leds;
 
         struct {
+            uint caes;
+        } sensors;
+
+        struct {
             uint sda;
             uint scl;
         } i2c;
@@ -83,6 +87,10 @@ struct {
         .leds = {
             .playpause = PICO_DEFAULT_LED_PIN, // GPIO 25 on Pico [2]
             .storage = { 10, 11 , 12, 13 },
+        },
+
+        .sensors = {
+            .caes = 8,
         },
 
         .i2c = {
