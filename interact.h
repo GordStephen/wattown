@@ -12,8 +12,8 @@ typedef struct InteractiveState {
 } InteractiveState;
 
 InteractiveState interact = {
-    .wind = { 0, 0, 0, 0, 0 },
-    .solar = { 0, 0, 0, 0, 0 },
+    .wind = { 0, 0, 0, 0, },
+    .solar = { 0, 0, 0, 0, },
     .caes = false,
     .caes_alarm = 0,
     .t = 0,

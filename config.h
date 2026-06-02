@@ -4,8 +4,8 @@
 #define N_PERIODS 96
 #define HOURS_PER_DAY 24
 
-#define NUM_WIND_TURBINES 5
-#define NUM_PV_PANELS 5
+#define NUM_WIND_TURBINES 4
+#define NUM_PV_PANELS 4
 
 #define NUM_STORAGE_LEDS 4
 
@@ -57,12 +57,15 @@ struct {
             uint wind2;
         } pwm;
 
+        struct {
+            uint wind[NUM_WIND_TURBINES];
+        } relays;
+
     } pins;
 
     struct {
         ADCAddress wind[NUM_WIND_TURBINES];
         ADCAddress pv[NUM_PV_PANELS];
-        ADCAddress caes;
     } gen_inputs;
 
     struct {
@@ -103,6 +106,10 @@ struct {
             .wind2 = 7,
         },
 
+        .relays = {
+            .wind = { 18, 19, 20, 21 },
+        },
+
     },
 
 
@@ -112,22 +119,19 @@ struct {
     .gen_inputs = {
 
         .wind = {
-            { .addr = 0x48, .ch = 0 },
-            { .addr = 0x48, .ch = 1 },
-            { .addr = 0x48, .ch = 2 },
-            { .addr = 0x48, .ch = 3 },
             { .addr = 0x48, .ch = 4 },
+            { .addr = 0x48, .ch = 5 },
+            { .addr = 0x48, .ch = 6 },
+            { .addr = 0x48, .ch = 7 },
         },
 
         .pv = {
             { .addr = 0x48, .ch = 0 },
-            { .addr = 0x49, .ch = 1 },
-            { .addr = 0x49, .ch = 2 },
-            { .addr = 0x49, .ch = 3 },
-            { .addr = 0x49, .ch = 4 },
+            { .addr = 0x48, .ch = 1 },
+            { .addr = 0x48, .ch = 2 },
+            { .addr = 0x48, .ch = 3 },
         },
 
-        .caes = { .addr = 0x49, .ch = 5 },
     },
 
     .pios = {
