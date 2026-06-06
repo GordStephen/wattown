@@ -11,10 +11,14 @@
 #include "ws2812.pio.h"
 #include "ws2812.h"
 
-#include "config.h"
 #include "util.h"
+
+#include "config.h"
+#include "state.h"
+
 #include "clock.h"
 #include "wind.h"
+
 #include "interact.h"
 #include "demo.h"
 
@@ -22,27 +26,59 @@
 // Define city lights agnostically as well
 // Clock drawing is mode-agnostic and already abstracted
 
-// gpio_set_irq_callback(caes_handler);
+void init() {
+
+    stdio_init_all(); // For logging over USB
+
+    init_controls();
+    demo_init_clockleds();
+    demo_init_cityleds();
+    init_storageleds();
+    init_transmissionleds();
+    init_pwm();
+
+    init_windrelays();
+    init_i2c(conf.pins.i2c.sda, conf.pins.i2c.scl);
+
+    reset_state();
+
+}
+
+int64_t advance(alarm_id_t id, __unused void* user_data) {
+
+    if (!is_running()) return 250000;
+
+    state.t = (state.t + 1) % N_PERIODS;
+
+    if (is_interactive()) advance_interactive();
+    else advance_demo();
+
+    return 1000000;
+
+}
+
+void irq_handler(uint pin, uint32_t event_mask) {
+    if (pin == conf.pins.buttons.reset) {
+        reset_state();
+        reset_peripherals();
+    }
+    else if (pin == conf.pins.sensors.caes[0]) caes_handler(0);
+    else if (pin == conf.pins.sensors.caes[1]) caes_handler(1);
+}
 
 int main() {
 
-    // For logging over USB
-    stdio_init_all();
+    init();
 
-    demo_init();
-    demo_reset();
+    add_alarm_in_ms(1000, advance, NULL, false);
 
-    alarm_id_t demo_alarm = add_alarm_in_ms(1000, demo_advance, NULL, false);
-    alarm_id_t wind_alarm = add_alarm_in_us(sample_delay, turbine_advance, NULL, false);
 
     // TODO: Move these to global init and interactive-mode specific
     // interrupt setup
-    init_button(conf.pins.sensors.caes);
-    gpio_set_irq_enabled(conf.pins.sensors.caes, GPIO_IRQ_EDGE_FALL, true);
-
-    gpio_set_irq_enabled(conf.pins.buttons.playpause, GPIO_IRQ_EDGE_FALL, true);
     gpio_set_irq_enabled(conf.pins.buttons.reset, GPIO_IRQ_EDGE_FALL, true);
-    gpio_set_irq_callback(demo_button_handler);
+    gpio_set_irq_enabled(conf.pins.sensors.caes[0], GPIO_IRQ_EDGE_FALL, true);
+    gpio_set_irq_enabled(conf.pins.sensors.caes[1], GPIO_IRQ_EDGE_FALL, true);
+    gpio_set_irq_callback(irq_handler);
     irq_set_enabled(IO_IRQ_BANK0, true);
 
     while (true) {}

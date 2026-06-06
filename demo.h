@@ -1,175 +1,105 @@
 #ifndef demo_h_INCLUDED
 #define demo_h_INCLUDED
 
-const uint8_t solar_clearsky[HOURS_PER_DAY] = {
-    0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0
-};
-
-typedef struct DemoState {
-    uint8_t demand[N_PERIODS];
-    uint8_t wind[N_PERIODS];
-    uint8_t solar[N_PERIODS];
-    uint8_t t;
-    uint8_t storage_soc;
-    bool paused;
-} DemoState;
-
-DemoState demo = {
-    .demand = {
-        3, 2, 3, 4, 5, 6, 6, 7, 7, 6, 6, 5, 5, 4, 4, 5, 5, 6, 6, 7, 6, 5, 4, 3,
-        3, 2, 3, 4, 5, 6, 6, 7, 7, 6, 6, 5, 5, 4, 4, 5, 5, 6, 6, 7, 6, 5, 4, 3,
-        3, 2, 3, 4, 5, 6, 6, 7, 7, 6, 6, 5, 5, 4, 4, 5, 5, 6, 6, 7, 6, 5, 4, 3,
-        3, 2, 3, 4, 5, 6, 6, 7, 7, 6, 6, 5, 5, 4, 4, 5, 5, 6, 6, 7, 6, 5, 4, 3 },
-    .wind = {
-        5, 4, 5, 6, 7, 6, 5, 4, 3, 4, 5, 6, 5, 6, 5, 4, 3, 4, 5, 6, 7, 7, 7, 6,
-        5, 4, 3, 2, 1, 2, 1, 0, 1, 2, 1, 2, 3, 2, 3, 2, 1, 0, 1, 0, 1, 2, 3, 2,
-        5, 4, 5, 6, 7, 6, 5, 4, 3, 4, 5, 6, 5, 6, 5, 4, 3, 4, 5, 6, 7, 7, 7, 6,
-        5, 4, 3, 2, 1, 2, 1, 0, 1, 2, 1, 2, 3, 2, 3, 2, 1, 0, 1, 0, 1, 2, 3, 2 },
-    .solar = {
-        0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 3, 3, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 2, 3, 4, 3, 2, 1, 0, 1, 0, 0, 0, 0, 0, 0 },
-    .t = 0,
-    .storage_soc = 0,
-    .paused = false,
-};
-
-void demo_init_controls() {
-    init_button(conf.pins.buttons.playpause);
+void init_controls() {
+    init_toggle(conf.pins.buttons.playpause);
+    init_toggle(conf.pins.buttons.modeselect);
     init_button(conf.pins.buttons.reset);
-    init_led(conf.pins.leds.playpause, true);
 }
 
-void demo_init_storageleds() {
+void init_storageleds() {
     for (size_t i = 0; i < NUM_STORAGE_LEDS; i += 1) {
         init_led(conf.pins.leds.storage[i], false);
     }
 }
 
-void demo_init_pwm() {
-    // TODO: Change PWM frequency to avoid noise?
-    gpio_set_function(conf.pins.pwm.wind1, GPIO_FUNC_PWM);
-    gpio_set_function(conf.pins.pwm.wind2, GPIO_FUNC_PWM);
-    uint slice_num = pwm_gpio_to_slice_num(conf.pins.pwm.wind1);
-    pwm_set_both_levels(slice_num, 0, 0);
-    pwm_set_enabled(slice_num, true);
-}
-
-void demo_init() {
-    demo_init_controls();
-    demo_init_clockleds();
-    demo_init_cityleds();
-    demo_init_storageleds();
-    demo_init_pwm();
-    init_i2c();
-}
-
-void demo_update_storageleds() {
-    // TODO: PWM for brightness levels instead of on / off
+void update_storageleds() {
     const uint8_t storage_incr = 15;
     for (size_t i = 0; i < NUM_STORAGE_LEDS; i += 1) {
-        gpio_put(conf.pins.leds.storage[i], demo.storage_soc > (i + 1) * storage_incr);
+        gpio_put(conf.pins.leds.storage[i], state.storage_soc > (i + 1) * storage_incr);
     }
 }
 
-void demo_toggle_pause() {
-
-    demo.paused ^= 1;
-
-    if (demo.paused) {
-        gpio_put(conf.pins.leds.playpause, false);
-        printf("[Simulation paused]\n");
-    } else {
-        gpio_put(conf.pins.leds.playpause, true);
-        printf("[Simulation resumed]\n");
-    }
-
+void init_transmissionleds() {
+    init_led(conf.pins.leds.wind_tx, false);
+    init_led(conf.pins.leds.import_tx, false);
 }
 
-void demo_reset() {
-    demo.t = 0;
-    demo.storage_soc = 0;
-    demo_update_storageleds();
-    demo_update_clockleds(0, demo.solar[0]);
-    printf("[Simulation reset]\n");
+void update_transmissionleds() {
+    gpio_put(conf.pins.leds.wind_tx, state.wind[state.t] > 2);
+    gpio_put(conf.pins.leds.import_tx, state.wind[state.t] > 2);
 }
 
-int64_t caes_timeout(alarm_id_t id, __unused void* user_data) {
-    interact.caes = false;
-    interact.caes_alarm = 0;
-    printf("CAES inactive");
-    return 0;
+void reset_peripherals() {
+    update_storageleds();
+    update_transmissionleds();
+    demo_update_clockleds(0, state.solar[0]);
 }
 
-void caes_handler(uint pin, uint32_t event_mask) {
-
-    if (interact.caes) {
-        cancel_alarm(interact.caes_alarm);
-    } else {
-        interact.caes = true;
-        printf("CAES active");
-    }
-
-    interact.caes_alarm = add_alarm_in_ms(1000, caes_timeout, NULL, false);
-
+bool is_running() {
+    return gpio_get(conf.pins.buttons.playpause);
 }
 
-void demo_button_handler(uint pin, uint32_t event_mask) {
-    if (pin == conf.pins.buttons.reset) demo_reset();
-    else if (pin == conf.pins.buttons.playpause) demo_toggle_pause();
-    else if (pin == conf.pins.sensors.caes) caes_handler(pin, event_mask);
+bool is_interactive() {
+    return gpio_get(conf.pins.buttons.modeselect);
 }
 
-void demo_update_storage() {
+void update_storage() {
 
-    uint8_t t = demo.t;
+    uint8_t t = state.t;
     uint8_t surplus = 0;
     uint8_t shortfall = 0;
-    uint8_t supply = demo.wind[t] + demo.solar[t];
+    uint8_t supply = state.wind[t] + state.solar[t];
 
-    if (supply >= demo.demand[t]) {
-        surplus = supply - demo.demand[t];
+    if (supply >= state.demand[t]) {
+        surplus = supply - state.demand[t];
     } else {
-        shortfall = demo.demand[t] - supply;
+        shortfall = state.demand[t] - supply;
     }
 
     if (surplus) {
-        demo.storage_soc += surplus;
-    } else if (demo.storage_soc >= shortfall) {
-        demo.storage_soc -= shortfall;
+        state.storage_soc += surplus;
+    } else if (state.storage_soc >= shortfall) {
+        state.storage_soc -= shortfall;
     } else {
-        demo.storage_soc = 0;
+        state.storage_soc = 0;
     }
 
 }
 
-int64_t demo_advance(alarm_id_t id, __unused void* user_data) {
+void advance_demo() {
 
-    if (demo.paused) return 250000;
+    set_wind_write();
 
-    uint8_t t = demo.t;
+    bool wind_blowing = state.wind[state.t] > 2;
+
+    if (wind_blowing && !state.wind_alarm) {
+        state.wind_alarm =
+            add_alarm_in_us(sample_delay, wind_advance, NULL, false);
+    } else if (!wind_blowing && state.wind_alarm) {
+        cancel_alarm(state.wind_alarm);
+        stop_pwm();
+        state.wind_alarm = 0;
+        wind_reset();
+    }
+
+    uint8_t t = state.t;
     uint8_t date = t / 24 + 1;
     uint8_t time = t % 24;
 
     if (!(time % 12)) printf("Day\tTime\tDemand (MW)\tWind (MW)\tSolar (MW)\tReservoir (MWh)\n");
 
-    demo_update_clockleds(time, demo.solar[t]);
-    demo_update_cityleds(time, demo.demand[t]);
+    demo_update_clockleds(t, state.solar[t]);
+    demo_update_cityleds(t, state.demand[t]);
 
-    demo_update_storage();
-    demo_update_storageleds();
+    update_transmissionleds();
+
+    update_storage();
+    update_storageleds();
 
     printf("%d\t%d:00\t%d\t\t%d\t\t%d\t\t%d\n", date, time,
-        demo.demand[t], demo.wind[t], demo.solar[t],
-        demo.storage_soc);
-
-    // uint8_t pv1 = get_generation(conf.gen_inputs.pv[0]);
-    // printf("PV Panel: %d\n", pv1);
-
-    demo.t = t+1 == N_PERIODS ? 0 : t+1;
-
-    return 1000000;
+        state.demand[t], state.wind[t], state.solar[t],
+        state.storage_soc);
 
 }
 

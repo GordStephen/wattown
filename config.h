@@ -6,6 +6,7 @@
 
 #define NUM_WIND_TURBINES 4
 #define NUM_PV_PANELS 4
+#define NUM_CAES 2
 
 #define NUM_STORAGE_LEDS 4
 
@@ -14,11 +15,6 @@ typedef struct PIOConfig {
     uint sm;
     uint offset;
 } PIOConfig;
-
-typedef struct ADCAddress {
-    uint8_t addr;
-    uint8_t ch;
-} ADCAddress;
 
 // UART defaults (unused): 0 (TX), 1 (RX)
 // I2C defaults: 4 (SDA), 5 (SCL)
@@ -30,6 +26,7 @@ struct {
 
         struct {
             uint playpause;
+            uint modeselect;
             uint reset;
         } buttons;
 
@@ -41,10 +38,12 @@ struct {
         struct {
             uint playpause;
             uint storage[NUM_STORAGE_LEDS];
+            uint wind_tx;
+            uint import_tx;
         } leds;
 
         struct {
-            uint caes;
+            uint caes[NUM_CAES];
         } sensors;
 
         struct {
@@ -79,21 +78,23 @@ struct {
 
         .buttons = {
             .playpause = 0,
-            .reset = 1
+            .modeselect = 1,
+            .reset = 27,
         },
 
         .pixels = {
-            .clock = 2,
+            .clock = 16,
             .city = 3,
         },
 
         .leds = {
-            .playpause = PICO_DEFAULT_LED_PIN, // GPIO 25 on Pico [2]
             .storage = { 10, 11 , 12, 13 },
+            .wind_tx = 14,
+            .import_tx = 15,
         },
 
         .sensors = {
-            .caes = 8,
+            .caes = { 8, 9 },
         },
 
         .i2c = {
@@ -140,6 +141,5 @@ struct {
     }
 
 };
-
 
 #endif // config_h_INCLUDED

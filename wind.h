@@ -11,8 +11,56 @@
 // 2000 samples/sec / 320 samples/waveform = 6.25 Hz waveform
 // 2000 samples/sec = .000500 second delay = .5 ms = 500 us
 
+void init_pwm() {
+    gpio_set_function(conf.pins.pwm.wind1, GPIO_FUNC_PWM);
+    gpio_set_function(conf.pins.pwm.wind2, GPIO_FUNC_PWM);
+    uint slice_num = pwm_gpio_to_slice_num(conf.pins.pwm.wind1);
+    pwm_set_wrap(slice_num, 65535 / 16);
+    pwm_set_phase_correct(slice_num, true);
+    pwm_set_both_levels(slice_num, 0, 0);
+    pwm_set_enabled(slice_num, true);
+}
+
+void start_pwm() {
+    uint slice_num = pwm_gpio_to_slice_num(conf.pins.pwm.wind1);
+    // pwm_set_enabled(slice_num, true);
+}
+
+void stop_pwm() {
+    uint slice_num = pwm_gpio_to_slice_num(conf.pins.pwm.wind1);
+    pwm_set_both_levels(slice_num, 0, 0);
+    // pwm_set_enabled(slice_num, false);
+}
+
+void init_windrelays() {
+    for (size_t i = 0; i < NUM_WIND_TURBINES; i += 1) {
+        init_led(conf.pins.relays.wind[i], false);
+    }
+}
+
+void set_wind_read() {
+    for (size_t i = 0; i < NUM_WIND_TURBINES; i += 1) {
+        uint pin = conf.pins.relays.wind[i];
+        if (gpio_get(pin)) gpio_put(pin, false);
+    }
+}
+
+
+void set_wind_write() {
+    for (size_t i = 0; i < NUM_WIND_TURBINES; i += 1) {
+        uint pin = conf.pins.relays.wind[i];
+        if (!gpio_get(pin)) gpio_put(pin, true);
+    }
+}
+
 uint16_t sample_delay = 1500; // initial sample delay, in microseconds
 uint16_t sin_idx = 0;
+
+void wind_reset() {
+    sample_delay = 1500;
+    sin_idx = 0;
+}
+
 
 uint16_t sintable[320] = {
     32768, 33411, 34054, 34697, 35338, 35979, 36619, 37257, 37893, 38528,
@@ -49,19 +97,18 @@ uint16_t sintable[320] = {
     26375, 27007, 27642, 28278, 28916, 29556, 30197, 30838, 31481, 32124
 };
 
-int64_t turbine_advance(alarm_id_t id, __unused void* user_data) {
+int64_t wind_advance(alarm_id_t id, __unused void* user_data) {
 
     sin_idx += 1;
     sin_idx %= 320;
 
-    uint16_t level = sintable[sin_idx];
+    uint16_t level = sintable[sin_idx] / 16;
 
     pwm_set_gpio_level(conf.pins.pwm.wind1, level);
-    pwm_set_gpio_level(conf.pins.pwm.wind2, 65535 - level);
+    pwm_set_gpio_level(conf.pins.pwm.wind2, 65535/16 - level);
 
     if (sample_delay > 500) {
         sample_delay -= 1; // ramp rate
-        // printf("%d\n", 1000000 / (sample_delay * 320));
     }
 
     return -sample_delay;

@@ -7,15 +7,18 @@ void init_led(uint pin, bool state) {
     gpio_put(pin, state);
 }
 
-void init_button(uint pin) {
+void init_toggle(uint pin) {
     gpio_init(pin);
     gpio_set_dir(pin, GPIO_IN);
 }
 
-void init_i2c() {
+void init_button(uint pin) {
+    gpio_init(pin);
+    gpio_set_dir(pin, GPIO_IN);
+    gpio_pull_up(pin);
+}
 
-    uint sda_pin = conf.pins.i2c.sda;
-    uint scl_pin = conf.pins.i2c.scl;
+void init_i2c(uint sda_pin, uint scl_pin) {
 
     i2c_init(i2c_default, 100 * 1000);
 
@@ -25,6 +28,11 @@ void init_i2c() {
     gpio_pull_up(scl_pin);
 
 }
+
+typedef struct ADCAddress {
+    uint8_t addr;
+    uint8_t ch;
+} ADCAddress;
 
 const uint8_t adc_channel_cmd[8] = {
     0x83, 0xC3, 0x93, 0xD3, 0xA3, 0xE3, 0xB3, 0xF3
